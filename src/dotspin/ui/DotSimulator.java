@@ -23,18 +23,20 @@ public class DotSimulator extends JComponent {
 	private static final long serialVersionUID = -7233593544797879072L;
 	
 	public ArrayList<PointDouble> dots = new ArrayList<PointDouble>();
-	public int dotsNumber = 90;
+	public int dotsNumber = 150;
 	int dotsThickness = 5;
 	public Thread runningThr;
 	public boolean shouldRun = true;
 	
 	public double rotRate = 5;
-	public double falloff = 100;
+	public double falloff = 50;
 	public int waitTimeNano = 10 * 1000000; // 1 000 000 nanoseconds = 1 millisecond
 	
 	long debugSleepTimeNano = 10;
 	long debugExecTimeNano = 0;
+	long debugWaitMeasuredTimeNano = 0;
 	boolean mouseDown = false;
+	boolean rightMouseDown = false;
 	
 	public DotSimulator() {
 		
@@ -48,12 +50,20 @@ public class DotSimulator extends JComponent {
 
 			@Override
 			public void mousePressed(MouseEvent e) {
-				mouseDown = true;
+				if (e.getButton() == MouseEvent.BUTTON1) {
+					mouseDown = true;
+				} else {
+					rightMouseDown = true;
+				}
 			}
 
 			@Override
 			public void mouseReleased(MouseEvent e) {
-				mouseDown = false;
+				if (e.getButton() == MouseEvent.BUTTON1) {
+					mouseDown = false;
+				} else {
+					rightMouseDown = false;
+				}
 			}
 
 			@Override
@@ -70,7 +80,15 @@ public class DotSimulator extends JComponent {
 			public void keyTyped(KeyEvent e) {}
 
 			@Override
-			public void keyPressed(KeyEvent e) {}
+			public void keyPressed(KeyEvent e) {
+
+				if (e.getKeyCode() == KeyEvent.VK_N) {
+					
+					dots.add(getMouseRelPos());
+					
+				}
+				
+			}
 
 			@Override
 			public void keyReleased(KeyEvent e) {
@@ -144,7 +162,7 @@ public class DotSimulator extends JComponent {
 		g2.setColor(new Color(getBackground().getRed()/255f, getBackground().getGreen()/255f,
 				getBackground().getBlue()/255f, 0.7f)); //semi transparent bg for text
 		
-		g2.fillRect(0, 0, getWidth(), fm.getHeight()*4 + fm.getDescent());
+		g2.fillRect(0, 0, getWidth(), fm.getHeight()*5 + fm.getDescent());
 		g2.fillRect(0,
 				getHeight() - (fm.getHeight()*2) - fm.getDescent() - fm.getLeading(),
 				getWidth(),
@@ -155,10 +173,13 @@ public class DotSimulator extends JComponent {
 		g2.drawString("Press A to change amount of dots. (" + dotsNumber + ")", 0, fm.getHeight() *2);
 		g2.drawString("Press Z to change rotation rate. (" + rotRate + ")", 0, fm.getHeight() *3);
 		g2.drawString("Press X to change falloff factor. (" + falloff + ")", 0, fm.getHeight() *4);
+		g2.drawString("Press or hold N to create a dot at pointer.", 0, fm.getHeight() *5);
+		
 		g2.drawString("runtime " + (double)debugExecTimeNano/1000000 + " ms", 0, getHeight() - fm.getDescent()
 				- fm.getLeading());
-		g2.drawString("clock time " + (double)(debugExecTimeNano+debugSleepTimeNano)/1000000 + " ms of intended "
-				+ (double)waitTimeNano/1000000 + " ms",
+		g2.drawString("clock time " + 
+					String.format("%05.2f", (double)(debugWaitMeasuredTimeNano)/1000000) + " ms of intended "
+				+ String.format("%05.2f", (double)waitTimeNano/1000000) + " ms",
 				0, getHeight() - fm.getHeight() - fm.getDescent()
 				- fm.getLeading());
 		
@@ -189,6 +210,7 @@ public class DotSimulator extends JComponent {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
+					debugWaitMeasuredTimeNano = System.nanoTime() - start;
 					
 				}
 				
@@ -219,12 +241,9 @@ public class DotSimulator extends JComponent {
 	
 	public void updateSim() {
 		
-		if (!mouseDown) return;
+		if (!mouseDown && !rightMouseDown) return;
 		
-		PointDouble mousePos = new PointDouble(MouseInfo.getPointerInfo().getLocation().x, 
-				MouseInfo.getPointerInfo().getLocation().y);
-		PointDouble compPos = new PointDouble( getLocationOnScreen().x, getLocationOnScreen().y );
-		PointDouble relPos = new PointDouble(mousePos.x - compPos.x, mousePos.y - compPos.y);
+		PointDouble relPos = getMouseRelPos();
 		
 		// calculate dots SPEEEN
 		
@@ -241,7 +260,9 @@ public class DotSimulator extends JComponent {
 			double change = rotRate - (dist/falloff);
 			if (change > rotRate) change = rotRate;
 			if (change < 0) change = 0;
-			angle += change;
+			
+			if (mouseDown) angle += change;
+			if (rightMouseDown) angle -= change;
 //			angle += rotRate;
 			angle = validateAngle(angle);
 			
@@ -261,6 +282,17 @@ public class DotSimulator extends JComponent {
 		while (angle < 0) angle += 360;
 		
 		return angle;
+		
+	}
+	
+	public PointDouble getMouseRelPos() {
+		
+		PointDouble mousePos = new PointDouble(MouseInfo.getPointerInfo().getLocation().x, 
+				MouseInfo.getPointerInfo().getLocation().y);
+		PointDouble compPos = new PointDouble( getLocationOnScreen().x, getLocationOnScreen().y );
+		PointDouble relPos = new PointDouble(mousePos.x - compPos.x, mousePos.y - compPos.y);
+		
+		return relPos;
 		
 	}
 
