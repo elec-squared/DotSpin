@@ -5,12 +5,12 @@ i made this as a little fun project to work on. it turned out to be really fun, 
 
 changes:
 
-DotSpin Version 2:
+DotSpin Version 2
 
 + Added reverse direction rotation (hold any mouse button other than left mouse button)
 
 + Added the ability to add your own dots in a custom position
 
-> Changed starting parameters
+* Changed starting parameters
 
-> Corrected wait time measurement
+* Corrected wait time measurement
